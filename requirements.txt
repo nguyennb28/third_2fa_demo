@@ -1,0 +1,10 @@
+Django
+django-two-factor-auth
+PyMySQL
+djangorestframework
+qrcode
+djangorestframework-simplejwt
+markdown
+django-filter
+django_extensions
+phonenumbers

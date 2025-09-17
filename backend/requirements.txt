@@ -1,0 +1,16 @@
+asgiref==3.9.1
+Django==5.2.6
+django-extensions==4.1
+django-filter==25.1
+django-formtools==2.5.1
+django-otp==1.6.1
+django-phonenumber-field==8.1.0
+django-two-factor-auth==1.18.0
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+Markdown==3.9
+phonenumbers==9.0.14
+PyJWT==2.10.1
+PyMySQL==1.1.2
+qrcode==8.2
+sqlparse==0.5.3
