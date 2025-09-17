@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django_otp.admin import OTPAdminSite
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from authentication.views import CustomTokenObtainPairView
@@ -36,4 +36,5 @@ urlpatterns = [
     path("admin/", admin_site.urls),
     path("api/token/", CustomTokenObtainPairView.as_view(), name="token"),
     path("api/refresh/token/", TokenRefreshView.as_view(), name="refresh-token"),
+    path("api/", include("authentication.urls")),
 ]

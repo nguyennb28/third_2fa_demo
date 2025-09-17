@@ -1,0 +1,23 @@
+class CreateQRView(APIView):
+    def post(self, request):
+        user = request.user  # User đang login
+        
+        # Bước 1: Tạo "thiết bị ảo" trong database
+        device = TOTPDevice.objects.create(
+            user=user,
+            name='my-phone',
+            confirmed=False  # ← Quan trọng: CHƯA XÁC NHẬN
+        )
+        
+        # Bước 2: Lấy thông tin kết nối
+        qr_url = device.config_url  
+        # qr_url = "otpauth://totp/MyApp:admin?secret=ABC123&issuer=MyApp"
+        
+        # Bước 3: Tạo QR code từ URL này
+        qr_code_image = tạo_qr_từ_url(qr_url)
+        
+        # Bước 4: Gửi về frontend
+        return {
+            "qr_code": qr_code_image,
+            "device_id": device.id  # ← Để dùng ở bước tiếp theo
+        }
