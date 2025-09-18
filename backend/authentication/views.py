@@ -68,9 +68,20 @@ class CreateQRView(APIView):
 
 
 class VerifyOTPView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     def post(self, request):
         device_id = request.data.get("device_id")
         otp_key = request.data.get("otp_key")
+
+        if not device_id or not otp_key:
+            return Response(
+                {
+                    "error": "Need device_id and otp_key",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Find device
         device = TOTPDevice.objects.filter(
@@ -117,28 +128,36 @@ class LoginView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        has_2fa = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
 
-        if has_2fa:
-            if not otp_key:
-                return Response(
-                    {"requires_2fa": True, "message": "Required OTP Key"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
-            if not device.verify_token(otp_key):
-                return Response(
-                    {
-                        "error": "Wrong OTP Key",
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+
+        if not device:
+            return Response(
+                {
+                    "error": "Not found device",
+                    "message": "Contact admin to support",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not otp_key:
+            return Response(
+                {"requires_2fa": True, "message": "Required OTP Key"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not device.verify_token(otp_key):
+            return Response(
+                {
+                    "error": "Wrong OTP Key",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         refresh = RefreshToken.for_user(user)
         return Response(
             {
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
-                "has_2fa": has_2fa,
+                "has_2fa": True,
                 "message": "Successfully!",
             },
             status=status.HTTP_200_OK,
@@ -174,7 +193,9 @@ class CreateUserView(APIView):
 
         try:
             new_user = User.objects.create(
-                username=username, password=password, is_active=False
+                username=username,
+                password=password,
+                is_active=True,
             )
             # Create device TOTP for account
             device = self.create_totp_device(new_user)
