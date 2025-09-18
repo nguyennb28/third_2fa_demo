@@ -86,8 +86,9 @@ class VerifyOTPView(APIView):
 
         # Find device
         device = TOTPDevice.objects.filter(
-            id=device_id, user=request.user, confirmed=False
-        )
+            id=device_id, confirmed=False
+        ).get()
+
 
         if device.verify_token(otp_key):
             device.confirmed = True
@@ -198,7 +199,8 @@ class CreateUserView(APIView):
             new_user = User.objects.create_user(
                 username=username,
                 password=password,
-                is_active=False,
+                is_active=True,
+                is_staff=True,
             )
             # Create device TOTP for account
             device = self.create_totp_device(new_user)

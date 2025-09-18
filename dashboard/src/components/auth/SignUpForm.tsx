@@ -11,6 +11,10 @@ export default function SignUpForm() {
   const [isChecked, setIsChecked] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [qrCode, setQrCode] = useState("");
+  const [deviceId, setDeviceId] = useState("");
+  const [newUserId, setNewUserId] = useState("");
+  const [otpKeyVerify, setOtpKeyVerify] = useState("");
   const [access, setAccessToken] = useState("");
 
   const handleUsername = (e: ChangeEvent<HTMLInputElement>) => [
@@ -37,14 +41,35 @@ export default function SignUpForm() {
       );
       if (response.status == 200) {
         const { new_user_id, device_id, qr_code, status } = response.data;
-        console.log(`new_user_id: ${new_user_id}`);
-        console.log(`device_id: ${device_id}`);
-        console.log(`qr_code: ${qr_code}`);
-        console.log(`status: ${status}`);
+        setNewUserId(new_user_id);
+        setDeviceId(device_id);
+        setQrCode(qr_code);
       }
     } else {
       alert("Không có thông tin");
       return;
+    }
+  };
+
+  const verifyOtp = async (device_id: string, otp_key: string) => {
+    if (device_id && otp_key) {
+      const response = await axios.post(
+        `http://localhost:8991/api/verify-otp/`,
+        {
+          device_id,
+          otp_key,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access}`,
+          },
+        }
+      );
+      if (response.status == 200) {
+        console.log(response);
+      }
+    } else {
+      alert("Hãy cung cấp device_id và otp_key");
     }
   };
 
@@ -227,6 +252,34 @@ export default function SignUpForm() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-5">
+              {qrCode && (
+                <img src={qrCode} alt="QR Code" className="w-[200px]" />
+              )}
+            </div>
+
+            <div>
+              {deviceId && (
+                <div>
+                  <p>Device id: {deviceId}</p>
+                  <div>
+                    <input
+                      type="text"
+                      value={otpKeyVerify}
+                      onChange={(e) => setOtpKeyVerify(e.currentTarget.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      verifyOtp(deviceId, otpKeyVerify);
+                    }}
+                  >
+                    Verify OTP
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mt-5">
