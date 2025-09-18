@@ -185,17 +185,19 @@ class CreateUserView(APIView):
             )
 
         # User is exist ???
-        if User.objects.filter(username=username).exists():
+        check_user = User.objects.filter(username=username).exists()
+        if check_user:
+            print(check_user)
             return Response(
                 {"error": "User already exists"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            new_user = User.objects.create(
+            new_user = User.objects.create_user(
                 username=username,
                 password=password,
-                is_active=True,
+                is_active=False,
             )
             # Create device TOTP for account
             device = self.create_totp_device(new_user)
@@ -242,7 +244,7 @@ class CreateUserView(APIView):
         img = qr.make_image(fill_color="black", back_color="white")
 
         buffer = io.BytesIO()
-        img.save(buffer, format="JPG")
+        img.save(buffer, format="PNG")
         qr_image = base64.b64encode(buffer.getvalue()).decode()
 
         return qr_image

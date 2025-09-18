@@ -1,13 +1,60 @@
-import { useState } from "react";
+import { ChangeEvent, useState, useEffect } from "react";
 import { Link } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
+import axios from "axios";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [access, setAccessToken] = useState("");
+
+  const handleUsername = (e: ChangeEvent<HTMLInputElement>) => [
+    setUsername(e.currentTarget.value),
+  ];
+
+  const handlePassword = (e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.currentTarget.value);
+  };
+
+  const createAccount = async (username: string, password: string) => {
+    if (username && password) {
+      const response = await axios.post(
+        `http://localhost:8991/api/add-account/`,
+        {
+          username,
+          password,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access}`,
+          },
+        }
+      );
+      if (response.status == 200) {
+        const { new_user_id, device_id, qr_code, status } = response.data;
+        console.log(`new_user_id: ${new_user_id}`);
+        console.log(`device_id: ${device_id}`);
+        console.log(`qr_code: ${qr_code}`);
+        console.log(`status: ${status}`);
+      }
+    } else {
+      alert("Không có thông tin");
+      return;
+    }
+  };
+
+  useEffect(() => {
+    const access = localStorage.getItem("access");
+    if (access) {
+      setAccessToken(access);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
@@ -82,11 +129,11 @@ export default function SignUpForm() {
                 </span>
               </div>
             </div>
-            <form>
+            <div>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   {/* <!-- First Name --> */}
-                  <div className="sm:col-span-1">
+                  {/* <div className="sm:col-span-1">
                     <Label>
                       First Name<span className="text-error-500">*</span>
                     </Label>
@@ -96,9 +143,9 @@ export default function SignUpForm() {
                       name="fname"
                       placeholder="Enter your first name"
                     />
-                  </div>
+                  </div> */}
                   {/* <!-- Last Name --> */}
-                  <div className="sm:col-span-1">
+                  {/* <div className="sm:col-span-1">
                     <Label>
                       Last Name<span className="text-error-500">*</span>
                     </Label>
@@ -108,18 +155,24 @@ export default function SignUpForm() {
                       name="lname"
                       placeholder="Enter your last name"
                     />
-                  </div>
+                  </div> */}
                 </div>
                 {/* <!-- Email --> */}
                 <div>
                   <Label>
-                    Email<span className="text-error-500">*</span>
+                    Username<span className="text-error-500">*</span>
                   </Label>
-                  <Input
+                  {/* <Input
                     type="email"
                     id="email"
                     name="email"
                     placeholder="Enter your email"
+                  /> */}
+                  <input
+                    type="text"
+                    className="p-3 border-2 border-gray-600 rounded-md w-full"
+                    onChange={handleUsername}
+                    placeholder="Username"
                   />
                 </div>
                 {/* <!-- Password --> */}
@@ -128,9 +181,11 @@ export default function SignUpForm() {
                     Password<span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
-                    <Input
-                      placeholder="Enter your password"
-                      type={showPassword ? "text" : "password"}
+                    <input
+                      type="password"
+                      className="p-3 border-2 border-gray-600 rounded-md w-full"
+                      onChange={handlePassword}
+                      placeholder="Password"
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -164,12 +219,15 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                  <button
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                    onClick={() => createAccount(username, password)}
+                  >
                     Sign Up
                   </button>
                 </div>
               </div>
-            </form>
+            </div>
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
