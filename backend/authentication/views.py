@@ -13,6 +13,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.db import transaction
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -165,7 +166,7 @@ class LoginView(APIView):
 
 
 class CreateUserView(APIView):
-    authentication_classes = []
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @transaction.atomic
