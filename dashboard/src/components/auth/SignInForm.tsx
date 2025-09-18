@@ -1,14 +1,64 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import React, { ChangeEvent, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
+import axios from "axios";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [otpKey, setOtpKey] = useState("");
+
+  // Navigate
+  const navigate = useNavigate();
+
+  // Feature
+  const handleUsername = (e: ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.currentTarget.value);
+  };
+
+  const handlepPassword = (e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.currentTarget.value);
+  };
+
+  const handleOTP = (e: ChangeEvent<HTMLInputElement>) => {
+    setOtpKey(e.currentTarget.value);
+  };
+
+  const auth = async (username: string, password: string, otpKey: string) => {
+    if (username && password && otpKey) {
+      const payload = {
+        username,
+        password,
+        otp_key: otpKey,
+      };
+
+      const response = await axios.post(
+        `http://localhost:8991/api/token/`,
+        payload
+      );
+      if (response.status == 200) {
+        const { access, refresh } = response.data;
+        localStorage.setItem("access", access);
+        localStorage.setItem("refresh", refresh);
+
+        navigate("/", { replace: true });
+      }
+    } else {
+      alert("Thông tin đăng nhập không đủ, hãy cung cấp đầy đủ");
+      return;
+    }
+  };
+
+  // useEffect(() => {
+  // if (username && password && otpKey) auth(username, password, otpKey);
+  // }, [username, password, otpKey]);
+
   return (
     <div className="flex flex-col flex-1">
       <div className="w-full max-w-md pt-10 mx-auto">
@@ -83,22 +133,34 @@ export default function SignInForm() {
                 </span>
               </div>
             </div>
-            <form>
+            <div>
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Email <span className="text-error-500">*</span>{" "}
+                    Username <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" />
+                  {/* <Input placeholder="info@gmail.com" /> */}
+                  <input
+                    type="text"
+                    value={username}
+                    className="border-2 p-3 w-full border-gray-800 rounded-md"
+                    onChange={handleUsername}
+                  />
                 </div>
                 <div>
                   <Label>
                     Password <span className="text-error-500">*</span>{" "}
                   </Label>
                   <div className="relative">
-                    <Input
+                    {/* <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
+                    /> */}
+                    <input
+                      type="password"
+                      value={password}
+                      className="border-2 p-3 w-full border-gray-800 rounded-md"
+                      onChange={handlepPassword}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -111,6 +173,17 @@ export default function SignInForm() {
                       )}
                     </span>
                   </div>
+                </div>
+                <div>
+                  <Label>
+                    OTP Key <span className="text-error-500">*</span>{" "}
+                  </Label>
+                  <input
+                    type="text"
+                    value={otpKey}
+                    className="border-2 p-3 w-full border-gray-800 rounded-md"
+                    onChange={handleOTP}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -127,12 +200,18 @@ export default function SignInForm() {
                   </Link>
                 </div>
                 <div>
-                  <Button className="w-full" size="sm">
-                    Sign in
-                  </Button>
+                  {username && password && otpKey && (
+                    <button
+                      className="w-full h-[100px] bg-blue-500"
+                      // size="sm"
+                      onClick={() => auth(username, password, otpKey)}
+                    >
+                      Sign in
+                    </button>
+                  )}
                 </div>
               </div>
-            </form>
+            </div>
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
