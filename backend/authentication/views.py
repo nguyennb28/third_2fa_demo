@@ -4,11 +4,15 @@ from .serializers import CustomTokenObtainPairSerializer
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from django_otp.plugins.otp_totp.models import TOTPDevice
 import qrcode
 import io
 import base64
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import User
+from django.db import transaction
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -86,3 +90,138 @@ class VerifyOTPView(APIView):
                 {"error": "Wrong OTP key"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+"""
+    THỰC RA VIẾT VỚI MỤC ĐÍCH LUYỆN TẬP CHỨ KHÔNG CẦN
+    PHẢI VIẾT class LoginView này làm gì cho nó đau đầu
+
+"""
+
+
+class LoginView(APIView):
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        otp_key = request.data.get("otp_key")
+
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response(
+                {
+                    "error": "Wrong username or password",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        has_2fa = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+
+        if has_2fa:
+            if not otp_key:
+                return Response(
+                    {"requires_2fa": True, "message": "Required OTP Key"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+            if not device.verify_token(otp_key):
+                return Response(
+                    {
+                        "error": "Wrong OTP Key",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "has_2fa": has_2fa,
+                "message": "Successfully!",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class CreateUserView(APIView):
+    authentication_classes = []
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    @transaction.atomic
+    def post(self, request):
+        if not request.user:
+            return Response(
+                {"error": "Not logged in "},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if not username or not password:
+            return Response(
+                {"error": "Username and password required!!!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # User is exist ???
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"error": "User already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            new_user = User.objects.create(
+                username=username, password=password, is_active=False
+            )
+            # Create device TOTP for account
+            device = self.create_totp_device(new_user)
+            qr_image = self.create_qr(device)
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "Account created successfully",
+                    "new_user_id": new_user.id,
+                    "device_id": device.id,
+                    "qr_code": f"data:image/png;base64,{qr_image}",
+                    "status": "Deactive - Scan QR",
+                    "instructions": [
+                        "1. Đưa thông tin tài khoản cho user",
+                        "2. Yêu cầu có app Google Authenticator",
+                        "3. Scan QR bằng Google Authenticator",
+                    ],
+                }
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "error": "Error creating account",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def create_totp_device(self, user):
+        device = TOTPDevice.objects.create(
+            user=user,
+            name=f"{user.username}-device",
+            confirmed=False,
+        )
+        return device
+
+    def create_qr(self, device):
+        qr_url = device.config_url
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPG")
+        qr_image = base64.b64encode(buffer.getvalue()).decode()
+
+        return qr_image
