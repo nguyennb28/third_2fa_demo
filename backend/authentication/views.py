@@ -63,3 +63,26 @@ class CreateQRView(APIView):
             )
 
 
+class VerifyOTPView(APIView):
+    def post(self, request):
+        device_id = request.data.get("device_id")
+        otp_key = request.data.get("otp_key")
+
+        # Find device
+        device = TOTPDevice.objects.filter(
+            id=device_id, user=request.user, confirmed=False
+        )
+
+        if device.verify_token(otp_key):
+            device.confirmed = True
+            device.save()
+
+            return Response(
+                {"message": "2FA enabled successfully"},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"error": "Wrong OTP key"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
